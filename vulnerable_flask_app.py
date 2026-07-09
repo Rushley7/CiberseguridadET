@@ -46,15 +46,17 @@ def login():
 
         conn = get_db_connection()
 
-        # Inyección de SQL solo si se detecta un payload de inyección de SQL
-        if "' OR '" in password:
-            query = "SELECT * FROM users WHERE username = '{}' AND password = '{}'".format(
-                username, password)
-            user = conn.execute(query).fetchone()
-        else:
-            query = "SELECT * FROM users WHERE username = ? AND password = ?"
-            hashed_password = hash_password(password)
-            user = conn.execute(query, (username, hashed_password)).fetchone()
+        # CORRECCION VULN #1 (SQL Injection):
+        # Se elimino la rama que formateaba el input del usuario directamente
+        # dentro del string SQL (".format()"). Ahora se usa SIEMPRE una
+        # consulta parametrizada con placeholders "?". El driver sqlite3
+        # trata el input del usuario como dato literal, nunca como parte
+        # del comando SQL, por lo que ya no es posible romper la sintaxis
+        # de la consulta con comillas u operadores SQL.
+        query = "SELECT * FROM users WHERE username = ? AND password = ?"
+        hashed_password = hash_password(password)
+        user = conn.execute(query, (username, hashed_password)).fetchone()
+        conn.close()
 
         if user:
             session['user_id'] = user['id']
