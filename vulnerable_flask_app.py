@@ -6,6 +6,26 @@ import os
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+# CORRECCION VULN #4 (Cabeceras de seguridad HTTP faltantes):
+# Flask no envia por defecto ninguna cabecera de proteccion contra
+# clickjacking, sniffing de tipo MIME o inyeccion de recursos externos.
+# Este middleware se ejecuta automaticamente en cada respuesta HTTP.
+@app.after_request
+def set_security_headers(response):
+    # Mitiga: Content Security Policy (CSP) Header Not Set
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://maxcdn.bootstrapcdn.com; style-src 'self' https://maxcdn.bootstrapcdn.com; object-src 'none'; frame-ancestors 'self'; base-uri 'self'"
+    # Mitiga: Missing Anti-clickjacking Header
+    response.headers['X-Frame-Options'] = 'DENY'
+    # Mitiga: X-Content-Type-Options Header Missing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # Mitiga: Permissions Policy Header Not Set
+    response.headers['Permissions-Policy'] = 'geolocation=(), camera=(), microphone=()'
+    # Mitiga: Cross-Origin-* Headers Missing or Invalid
+    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    return response
+
+
 
 def get_db_connection():
     conn = sqlite3.connect('example.db')
