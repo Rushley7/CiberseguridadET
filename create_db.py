@@ -1,7 +1,7 @@
 import sqlite3
-import hashlib
+from werkzeug.security import generate_password_hash
 
-# Conexión a la base de datos (se creará automáticamente si no existe)
+# Conexion a la base de datos (se creara automaticamente si no existe)
 conn = sqlite3.connect('example.db')
 
 # Crear un cursor
@@ -9,7 +9,7 @@ c = conn.cursor()
 
 # Crear la tabla de usuarios
 c.execute('''
-    CREATE TABLE users (
+    CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
         password TEXT NOT NULL,
@@ -17,23 +17,21 @@ c.execute('''
     )
 ''')
 
-# Función para hash de contraseñas
-
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-# Insertar un usuario de prueba (las contraseñas están en SHA256 de 'password')
+# CORRECCION VULN #2 (Hash de contrasenas debil):
+# Se reemplazo hashlib.sha256() (rapido, sin salt, vulnerable a rainbow
+# tables) por generate_password_hash() de Werkzeug, que aplica un
+# algoritmo lento (PBKDF2-SHA256 por defecto) con salt aleatorio unico
+# por contrasena, haciendo inviables los ataques de diccionario/fuerza
+# bruta masivos y los rainbow tables precomputados.
 c.execute('''
     INSERT INTO users (username, password, role) VALUES
     ('admin', ?, 'admin'),
     ('user', ?, 'user')
-''', (hash_password('password'), hash_password('password')))
+''', (generate_password_hash('password'), generate_password_hash('password')))
 
 # Crear la tabla de comentarios
 c.execute('''
-    CREATE TABLE comments (
+    CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         comment TEXT NOT NULL,
@@ -41,8 +39,8 @@ c.execute('''
     )
 ''')
 
-# Guardar los cambios y cerrar la conexión
+# Guardar los cambios y cerrar la conexion
 conn.commit()
 conn.close()
 
-print("Base de datos y tablas creadas con éxito.")
+print("Base de datos y tablas creadas con exito.")

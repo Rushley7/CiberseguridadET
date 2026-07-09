@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template_string, session, redirect, url_for
+from werkzeug.security import check_password_hash
 import sqlite3
 import os
-import hashlib
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -11,10 +11,6 @@ def get_db_connection():
     conn = sqlite3.connect('example.db')
     conn.row_factory = sqlite3.Row
     return conn
-
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
 
 
 @app.route('/')
@@ -46,19 +42,15 @@ def login():
 
         conn = get_db_connection()
 
-        # CORRECCION VULN #1 (SQL Injection):
-        # Se elimino la rama que formateaba el input del usuario directamente
-        # dentro del string SQL (".format()"). Ahora se usa SIEMPRE una
-        # consulta parametrizada con placeholders "?". El driver sqlite3
-        # trata el input del usuario como dato literal, nunca como parte
-        # del comando SQL, por lo que ya no es posible romper la sintaxis
-        # de la consulta con comillas u operadores SQL.
-        query = "SELECT * FROM users WHERE username = ? AND password = ?"
-        hashed_password = hash_password(password)
-        user = conn.execute(query, (username, hashed_password)).fetchone()
+        # CORRECCION VULN #1 (SQL Injection): consulta parametrizada.
+        query = "SELECT * FROM users WHERE username = ?"
+        user = conn.execute(query, (username,)).fetchone()
         conn.close()
 
-        if user:
+        # CORRECCION VULN #2 (Hash debil): check_password_hash verifica
+        # el password en texto plano contra el hash con salt guardado,
+        # sin necesidad de recalcular ni exponer el algoritmo manualmente.
+        if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['role'] = user['role']
             return redirect(url_for('dashboard'))
