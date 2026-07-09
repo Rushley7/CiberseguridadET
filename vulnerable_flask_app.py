@@ -1,10 +1,18 @@
 from flask import Flask, request, render_template_string, session, redirect, url_for
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 from werkzeug.security import check_password_hash
 import sqlite3
 import os
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# CORRECCION VULN #5 (Ausencia de proteccion CSRF):
+# CSRFProtect genera un token unico por sesion y lo valida en cada
+# peticion POST/PUT/DELETE. Si el token no viene o no coincide (como
+# pasaria con un formulario forjado en un sitio externo), la peticion
+# se rechaza automaticamente con error 400.
+csrf = CSRFProtect(app)
 
 # CORRECCION VULN #4 (Cabeceras de seguridad HTTP faltantes):
 # Flask no envia por defecto ninguna cabecera de proteccion contra
@@ -89,6 +97,7 @@ def login():
                         <h1 class="mt-5">Login</h1>
                         <div class="alert alert-danger" role="alert">Invalid credentials!</div>
                         <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="form-group">
                                 <label for="username">Username</label>
                                 <input type="text" class="form-control" id="username" name="username">
@@ -116,6 +125,7 @@ def login():
             <div class="container">
                 <h1 class="mt-5">Login</h1>
                 <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">
                         <label for="username">Username</label>
                         <input type="text" class="form-control" id="username" name="username">
@@ -156,6 +166,7 @@ def dashboard():
             <div class="container">
                 <h1 class="mt-5">Welcome, user {{ user_id }}!</h1>
                 <form action="/submit_comment" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">
                         <label for="comment">Comment</label>
                         <textarea class="form-control" id="comment" name="comment" rows="3"></textarea>
