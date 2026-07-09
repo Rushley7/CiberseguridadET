@@ -232,4 +232,11 @@ def admin():
 
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    # Se sobrescribe el manejador WSGI para que la cabecera 'Server' que
+    # agrega el propio servidor de desarrollo de Werkzeug tambien quede
+    # oculta (el after_request solo cubre la capa de aplicacion Flask,
+    # no la capa del servidor WSGI subyacente).
+    from werkzeug.serving import WSGIRequestHandler
+    WSGIRequestHandler.server_version = "WebServer"
+    WSGIRequestHandler.sys_version = ""
     app.run(host='0.0.0.0', port=5000, debug=debug_mode)
